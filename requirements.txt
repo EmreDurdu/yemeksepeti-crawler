@@ -44,3 +44,4 @@ unittest2==1.1.0
 urllib3==1.26.2
 w3lib==1.22.0
 zope.interface==5.2.0
+scrapy==2.4.1
