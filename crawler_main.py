@@ -1,5 +1,4 @@
 from scrapy.crawler import CrawlerProcess, CrawlerRunner
-from twisted.internet import reactor, defer
 
 from CommentMatcher import CommentMatcher
 from Spiders import CommentSpider, CitiesSpider, DistrictSpider, RestaurantSpider, MenuSpider
