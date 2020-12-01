@@ -26,8 +26,6 @@ class RestaurantPicker:
         for t in tmp:
             self.city_names.append(t['name'])
 
-
-
     def add_area_names(self):
         restaurants = self.restaurants.find()
         i = 1
@@ -112,6 +110,9 @@ class RestaurantPicker:
 
     def pick_dataset(self, city=None, district=None, created_year=None, start_hour=None, end_hour=None, point=None):
         self.restaurant_dataset.remove({})
+        for name in self.db.list_collection_names():
+            if name not in ['City', 'Comment', 'District', 'Menu', 'Restaurant', 'RestaurantDataset']:
+                self.db.drop_collection(name_or_collection=name)
         query = {}
         if city is not None:
             tmp = difflib.get_close_matches(city, self.city_names, len(self.city_names), 0)

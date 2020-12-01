@@ -8,12 +8,30 @@ class DataSegmentizer:
         self.client = MongoClient()
         self.db = self.client['YemekSepeti']
         self.data_set = self.db['RestaurantDataset']
+        if self.data_set is None:
+            self.db.create_collection(name='RestaurantDataset')
+            self.data_set = self.db['RestaurantDataset']
+
         self.restaurants = self.db['Restaurant']
         self.comments = self.db['Comment']
         self.menus = self.db['Menu']
 
+    def fix_restaurants(self):
+        restaurants = self.restaurants.find()
+        for restaurant in restaurants:
+            display_name = restaurant['DisplayName']
+            if display_name is not None and ',' in display_name:
+                res_name = display_name.split(',')[0]
+                area_name = display_name.split(',')[1]
+                self.restaurants.update({'_id': restaurant['_id']}, {"$set": {
+                    "restaurant_name": res_name,
+                    "area_name": area_name
+                }})
+
     def segmentize(self):
         i = 1
+        self.comments.create_index([("menu_id", 1)])
+        self.comments.create_index([('restaurant_id', 1)])
         restaurants = self.data_set.find()
         for restaurant in restaurants:
             _menus = self.menus.find({'restaurant_id': restaurant['_id']})

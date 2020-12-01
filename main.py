@@ -66,6 +66,12 @@ if __name__ == '__main__':
 
     rp = RestaurantPicker()
     da = DataSegmentizer()
+    x = input('Do you want to fix data(y/n)')
+    if x == 'y':
+        rp.add_area_names()
+        rp.fix_work_hours()
+        rp.add_created_dates()
+
     ans = input('Do you want to pick a dataset again?(y/n)')
     if ans == 'y':
         print("Now it is time for picking dataset. If you do not want to enter an input. Type 'n'")
