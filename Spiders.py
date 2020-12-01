@@ -18,10 +18,10 @@ class CitiesSpider(scrapy.Spider):
     def __init__(self, **kwargs):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['YemekSepeti']
-        self.cities_collection = self.db['Cities']
+        self.cities_collection = self.db['City']
         if self.cities_collection is None:
             self.db.create_collection(name='City')
-            self.cities_collection = self.db['Cities']
+            self.cities_collection = self.db['City']
 
     def start_requests(self):
         print("Waiting for response...")
@@ -47,14 +47,10 @@ class CitiesSpider(scrapy.Spider):
 
 class DistrictSpider(scrapy.Spider):
 
-    def __init__(self, **kwargs):
+    def __init__(self):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['YemekSepeti']
         self.cities = self.db['City']
-        if self.cities is None:
-            self.db.create_collection(name='City')
-            self.cities = self.db['Cities']
-
         self.districts = self.db['District']
         if self.districts is None:
             self.db.create_collection(name='District')
@@ -98,15 +94,7 @@ class RestaurantSpider(scrapy.Spider):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['YemekSepeti']
         self.cities = self.db['City']
-        if self.cities is None:
-            self.db.create_collection(name='City')
-            self.districts = self.db['City']
-
         self.districts = self.db['District']
-        if self.districts is None:
-            self.db.create_collection(name='District')
-            self.districts = self.db['District']
-
         self.restaurants = self.db['Restaurant']
         if self.restaurants is None:
             self.db.create_collection(name='Restaurant')
@@ -178,22 +166,13 @@ class MenuSpider(scrapy.Spider):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['YemekSepeti']
         self.cities = self.db['City']
-        if self.cities is None:
-            self.db.create_collection(name='City')
-            self.cities = self.db['City']
-
         self.districts = self.db['District']
-        if self.districts is None:
-            self.db.create_collection(name='District')
-            self.districts = self.db['District']
-
         self.restaurants = self.db['Restaurant']
-        if self.restaurants is None:
-            self.db.create_collection(name='Restaurant')
-            self.restaurants = self.db['Restaurant']
-
         self.menus = self.db['Menu']
-        self.host = 'https://yemeksepeti.com'
+        if self.menus is None:
+            self.db.create_collection(name='Menu')
+            self.menus = self.db['Menu']
+        self.host = 'https://www.yemeksepeti.com'
         self.menu_counter = 0
 
     def start_requests(self):
@@ -210,36 +189,40 @@ class MenuSpider(scrapy.Spider):
 
         body = response.body
         restaurant_id = response.meta['restaurant_id']
-        if response.status == 301 or response.status == 302:
-            new_url = Selector(text=response.text).xpath(('//html/body/h2/a/@href')).get()
-            yield scrapy.Request(url=self.host + new_url,
+        if response.status != 200:
+            new_url = ""
+            if response.status == 301:
+                new_url = Selector(text=response.text).xpath("//html/body/a/@href").get()
+            elif response.status == 302:
+                new_url = self.host + Selector(text=response.text).xpath(('//html/body/h2/a/@href')).get()
+            yield scrapy.Request(url=new_url,
                                  callback=self.parse,
                                  meta={
                                      'restaurant_id': restaurant_id
                                  })
+        else:
+            _xpath = '//*[re:test(@id, "menu_\d$"]/div[2]/ul/li'
+            xpath = '//*[@id="menu_0"]'
+            menus = Selector(text=body).xpath('//*[re:test(@id, "menu_\d$")]/div[2]/ul/li').getall()
+            for menu in menus:
+                product_name = Selector(text=menu).xpath(
+                    '//li/div[@class="product"]/div[@class="product-info"]/a/text()').get()
+                product_desc = Selector(text=menu).xpath(
+                    '//li/div[@class="product"]/div[@class="product-desc"]/text()').get()
+                listed_price = Selector(text=menu).xpath('//li/div[contains(@class, "product-price")]/span[1]/text()').get()
+                discounted_price = Selector(text=menu).xpath(
+                    '//li/div[contains(@class, "product-price")]/span[2]/text()').get()
 
-        _xpath = '//*[re:test(@id, "menu_\d$"]/div[2]/ul/li'
-        xpath = '//*[@id="menu_0"]'
-        menus = Selector(text=body).xpath('//*[re:test(@id, "menu_\d$")]/div[2]/ul/li').getall()
-        for menu in menus:
-            product_name = Selector(text=menu).xpath(
-                '//li/div[@class="product"]/div[@class="product-info"]/a/text()').get()
-            product_desc = Selector(text=menu).xpath(
-                '//li/div[@class="product"]/div[@class="product-desc"]/text()').get()
-            listed_price = Selector(text=menu).xpath('//li/div[contains(@class, "product-price")]/span[1]/text()').get()
-            discounted_price = Selector(text=menu).xpath(
-                '//li/div[contains(@class, "product-price")]/span[2]/text()').get()
-
-            _menu = {
-                'product_name': product_name,
-                'product_desc': product_desc,
-                'listed_price': listed_price,
-                'discounted_price': discounted_price,
-                'restaurant_id': restaurant_id
-            }
-            inserted_id = self.menus.insert_one(_menu).inserted_id
-            print(f'{self.menu_counter}th menu added with id {inserted_id}')
-            self.menu_counter = self.menu_counter + 1
+                _menu = {
+                    'product_name': product_name,
+                    'product_desc': product_desc,
+                    'listed_price': listed_price,
+                    'discounted_price': discounted_price,
+                    'restaurant_id': restaurant_id
+                }
+                inserted_id = self.menus.insert_one(_menu).inserted_id
+                print(f'{self.menu_counter}th menu added with id {inserted_id}')
+                self.menu_counter = self.menu_counter + 1
 
 
 class CommentSpider(scrapy.Spider):
@@ -362,6 +345,7 @@ class CommentSpider(scrapy.Spider):
                     'date': _date.strftime('%d/%m/%Y'),
                     'comment': comment_text,
                     'restaurant_id': restaurant_id,
+                    'menu_id': None
 
                 }
                 current_comment_count = current_comment_count + 1
