@@ -172,6 +172,7 @@ class RestaurantSpider(scrapy.Spider):
 
 
 class MenuSpider(scrapy.Spider):
+    handle_httpstatus_list = [301, 302]
 
     def __init__(self, **kwargs):
         self.client = MongoClient('localhost', 27017)
@@ -206,8 +207,17 @@ class MenuSpider(scrapy.Spider):
                                  })
 
     def parse(self, response, **kwargs):
+
         body = response.body
         restaurant_id = response.meta['restaurant_id']
+        if response.status == 301 or response.status == 302:
+            new_url = Selector(text=response.text).xpath(('//html/body/h2/a/@href')).get()
+            yield scrapy.Request(url=self.host + new_url,
+                                 callback=self.parse,
+                                 meta={
+                                     'restaurant_id': restaurant_id
+                                 })
+
         _xpath = '//*[re:test(@id, "menu_\d$"]/div[2]/ul/li'
         xpath = '//*[@id="menu_0"]'
         menus = Selector(text=body).xpath('//*[re:test(@id, "menu_\d$")]/div[2]/ul/li').getall()
