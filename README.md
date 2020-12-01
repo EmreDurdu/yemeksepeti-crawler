@@ -8,6 +8,11 @@ MongoDB version = v4.4.2
 
 Make sure your MongoDB server is running on localhost and on port 27017.
 
+Data link:
+https://drive.google.com/file/d/1trN6OLsSNpYcKyUBggp_MFdT8fXWkctq/view?usp=sharing
+
+After downloading data, unzip the archive in the project's root directory
+
 ## Installation
 ``pip install -r requirements.txt ``
 
