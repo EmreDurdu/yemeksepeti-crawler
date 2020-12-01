@@ -51,9 +51,9 @@ class DistrictSpider(scrapy.Spider):
         self.client = MongoClient('localhost', 27017)
         self.db = self.client['YemekSepeti']
         self.cities = self.db['City']
-        if self.cities_collection is None:
+        if self.cities is None:
             self.db.create_collection(name='City')
-            self.cities_collection = self.db['Cities']
+            self.cities = self.db['Cities']
 
         self.districts = self.db['District']
         if self.districts is None:
